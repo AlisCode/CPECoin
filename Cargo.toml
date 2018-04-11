@@ -8,9 +8,9 @@ time = "*"
 rand = "*"
 rust-crypto = "*"
 serde = "*"
+serde_json = "*"
 serde_derive = "*"
 toml = "*"
-rocket = "*"
-rocket_codegen = "*"
+clap = "*"
 
 [workspace]

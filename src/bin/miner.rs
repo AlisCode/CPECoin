@@ -1,50 +1,73 @@
-#![feature(plugin)]
-#![plugin(rocket_codegen)]
-extern crate rocket;
-
+extern crate clap;
 extern crate cpecoin;
-#[macro_use]
-extern crate serde_derive;
 
-use cpecoin::blockchain::Block;
-use rocket::State;
+use clap::{App, Arg};
+use cpecoin::blockchain::{Block, get_transactions, proof_of_work, Transaction};
+use std::path::Path;
 
-#[derive(Deserialize)]
-pub struct MinerConfig {
-    /// The public address that will be rewarded coins when we mine blocks
-    pub miner_address: String,
-    /// The peers of this miner node
-    pub peers: Vec<String>,
-}
+const COINS_PER_BLOCK: u32 = 10;
 
 /// A struct representing the state of a miner
 pub struct Miner {
-    pub blockchain: Vec<Block>,
-    pub config: MinerConfig,
+	pub blockchain: Vec<Block>,
 }
 
 impl Miner {
-    pub fn new_empty() -> Self {
-        Miner {
-            blockchain: Vec::new(),
-            config: MinerConfig {
-                miner_address: "".into(),
-                peers: Vec::new(),
-            },
-        }
-    }
-}
-
-#[get("/blocks/len")]
-pub fn blockchain_length(miner: State<Miner>) -> String {
-    format!("{}", miner.blockchain.len())
+	pub fn new_empty() -> Self {
+		Miner {
+			blockchain: Vec::new(),
+		}
+	}
 }
 
 pub fn main() {
-    println!("Miner!");
-    let mut miner: Miner = Miner::new_empty();
-    rocket::ignite()
-        .mount("/", routes![blockchain_length])
-        .manage(miner)
-        .launch();
+	let args = App::new("CPECoin Miner")
+		.version("1.0")
+		.author("Olivier PINON <oliv.pinon@gmail.com>")
+		.about("Mines CPECoin for the given address")
+		.arg(Arg::with_name("address")
+			.short("a")
+			.value_name("address")
+			.help("Wallet Public Address to mine for")
+			.required(true))
+		.get_matches();
+
+	let miner_address = match args.value_of("address") {
+		Some(str) => str,
+		_ => "".into(),
+	};
+
+	let mut miner: Miner = Miner::new_empty();
+	let path_file: &str = "blockchain.cpecoin";
+	let path = Path::new(path_file);
+	if path.exists() {
+		miner.blockchain = cpecoin::blockchain::load_from_file(path_file);
+	} else {
+		miner.blockchain.push(Block::genesis());
+	}
+
+	println!("Now mining!");
+	loop {
+		// Gets the latest block in the chain
+		let (old_proof, index, prev_hash) = {
+			let block = miner.blockchain.last().unwrap();
+			(block.proof, block.index, block.prev_hash.clone())
+		};
+		// Blocks until the proof is found
+		let new_proof = proof_of_work(old_proof);
+
+		let mut transactions = get_transactions();
+		transactions.transactions.push(Transaction::new("network".into(), miner_address.clone(),
+														COINS_PER_BLOCK));
+		let mut new_block = Block::new_from_prev(index,
+												 prev_hash,
+												 cpecoin::blockchain::get_transactions());
+		new_block.proof = new_proof;
+		new_block.calc_hash();
+		println!("Mined a block with hash : {}", new_block.hash);
+		miner.blockchain.push(new_block);
+
+		// Save the blockchain to the file
+		cpecoin::blockchain::save_blockchain(&miner.blockchain);
+	}
 }
