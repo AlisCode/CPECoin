@@ -3,11 +3,10 @@
 The first ever CryptoCurrency of CPE Lyon!
 
 <p align="center">
-<img src="https://nical.github.io/lyon-doc/lyon-logo.svg" alt="Project logo">
+<img src="https://raw.githubusercontent.com/AlisCode/CPECoin/master/coin.png" alt="Project logo">
 </p>
 
-
-**NOTE**: This is a school project made essentially for fun and learning purposes, don't ever try to use this as a real crypto-currency system (you won't be able to, anyway :))
+**NOTE**: This is a school project, essentially for fun and learning purposes, please **don't** ever try to use this as a real crypto-currency system (you won't be able to, anyway :))
 
 ## Motivation
 
